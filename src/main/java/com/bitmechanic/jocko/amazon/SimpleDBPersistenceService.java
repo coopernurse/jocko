@@ -74,20 +74,59 @@ public class SimpleDBPersistenceService extends AbstractBlobBackedPersistenceSer
     }
 
     public void deleteAndCreateDomain() {
-        AmazonSimpleDBClient client = getAmazonSimpleDBClient();
         try {
-            client.deleteDomain(new DeleteDomainRequest(domain));
+            execWithBackoff(new SimpleDBCommand() {
+                @Override
+                public Object exec(AmazonSimpleDBClient client) throws AmazonSimpleDBException {
+                    client.deleteDomain(new DeleteDomainRequest(domain));
+                    return null;
+                }
+            });
         }
         catch (AmazonSimpleDBException e) {
             // ok -- domain may not exist
         }
 
         try {
-            client.createDomain(new CreateDomainRequest(domain));
+            execWithBackoff(new SimpleDBCommand() {
+                @Override
+                public Object exec(AmazonSimpleDBClient client) throws AmazonSimpleDBException {
+                    client.createDomain(new CreateDomainRequest(domain));
+                    return null;
+                }
+            });
         }
         catch (AmazonSimpleDBException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private Object execWithBackoff(SimpleDBCommand command) throws AmazonSimpleDBException {
+        AmazonSimpleDBClient client = getAmazonSimpleDBClient();
+
+        long timeout   = System.currentTimeMillis() + 15000;
+        long sleepTime = 250;
+        
+        while (System.currentTimeMillis() < timeout) {
+            try {
+                return command.exec(client);
+            }
+            catch (AmazonSimpleDBException e) {
+                if (e.getStatusCode() == 503) {
+                    try {
+                        Thread.sleep(sleepTime);
+                    } catch (InterruptedException e1) {
+                        e1.printStackTrace();
+                    }
+                    sleepTime = sleepTime * 2;
+                }
+                else {
+                    throw e;
+                }
+            }
+        }
+
+        throw new AmazonSimpleDBException("execWithBackoff: timeout exceeded");
     }
 
     @Override
@@ -322,6 +361,10 @@ public class SimpleDBPersistenceService extends AbstractBlobBackedPersistenceSer
 
     private AmazonSimpleDBClient getAmazonSimpleDBClient() {
         return new AmazonSimpleDBClient(awsAccessId, awsSecretKey);
+    }
+
+    private interface SimpleDBCommand {
+        Object exec(AmazonSimpleDBClient client) throws AmazonSimpleDBException;
     }
 
     private static final int INT_LENGTH = String.valueOf(Integer.MAX_VALUE).length();

@@ -1,1 +1,4 @@
-jocko-homo.iml
+jocko.iml
+.idea
+target
+src/main/resources/jocko-test.properties

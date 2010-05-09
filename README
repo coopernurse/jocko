@@ -1,0 +1,8 @@
+jocko - domain neutral services for Java
+
+
+Acknowledgements:
+
+ - Includes source to s3shell written by EricW@AWS
+       See: http://developer.amazonwebservices.com/connect/entry.jspa?externalID=138
+ - 
