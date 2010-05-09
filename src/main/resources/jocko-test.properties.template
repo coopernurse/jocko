@@ -1,0 +1,15 @@
+# ImageMagick binaries
+convertBinary=/opt/local/bin/convert
+identifyBinary=/opt/local/bin/identify
+compositeBinary=/opt/local/bin/composite
+compareBinary=/opt/local/bin/compare
+pdiffBinary=/Users/james/bin/perceptualdiff
+
+# Amazon Web Services credentials
+awsAccessId=abcdef
+awsSecretKey=abcdef
+
+# Authorize.NET credentials
+authorizeName=abcdef
+authorizeKey=abcdef
+authorizeURL=https://apitest.authorize.net/xml/v1/request.api
