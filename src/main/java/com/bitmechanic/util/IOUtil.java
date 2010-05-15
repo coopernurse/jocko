@@ -16,6 +16,7 @@ import java.io.Reader;
 import java.io.Writer;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLConnection;
 import java.net.URLEncoder;
 import java.nio.channels.FileChannel;
 import java.util.HashMap;
@@ -107,19 +108,25 @@ public class IOUtil {
     public static byte[] fetchUrlToByteArray(String url) throws IOException {
         URL urlObj = new URL(url);
 
-        HttpURLConnection httpConn = (HttpURLConnection) urlObj.openConnection();
-        httpConn.setRequestMethod("GET");
-        httpConn.setReadTimeout(30000);
-        httpConn.setInstanceFollowRedirects(false);
-        httpConn.connect();
-        if (httpConn.getResponseCode() != HttpURLConnection.HTTP_OK) {
-            throw new IOException("Got non-200 HTTP response: " + httpConn.getResponseCode() + " - " + httpConn.getResponseMessage() + " - " + url);
+        URLConnection conn = urlObj.openConnection();
+        HttpURLConnection httpConn = null;
+        if (conn instanceof HttpURLConnection) {
+            httpConn = (HttpURLConnection)conn;
+            httpConn.setRequestMethod("GET");
+            httpConn.setReadTimeout(30000);
+            httpConn.setInstanceFollowRedirects(false);
+            httpConn.connect();
+            if (httpConn.getResponseCode() != HttpURLConnection.HTTP_OK) {
+                throw new IOException("Got non-200 HTTP response: " + httpConn.getResponseCode() + " - " + httpConn.getResponseMessage() + " - " + url);
+            }
         }
 
-        InputStream responseData = httpConn.getInputStream();
+        InputStream responseData = conn.getInputStream();
         byte data[] = getBytesFromInput(responseData);
         responseData.close();
-        httpConn.disconnect();
+        if (httpConn != null) {
+            httpConn.disconnect();
+        }
         return data;
     }
 
@@ -223,6 +230,38 @@ public class IOUtil {
         finally {
             is.close();
         }
+    }
+
+    public static File createTempDirectory() throws IOException {
+        final File temp;
+
+        temp = File.createTempFile("temp", Long.toString(System.nanoTime()));
+
+        if(!(temp.delete())) {
+            throw new IOException("Could not delete temp file: " + temp.getAbsolutePath());
+        }
+
+        if(!(temp.mkdir())) {
+            throw new IOException("Could not create temp directory: " + temp.getAbsolutePath());
+        }
+
+        return (temp);
+    }
+
+    public static boolean deleteDirectory(File path) {
+        if (path.exists()) {
+            File[] files = path.listFiles();
+            for(int i=0; i < files.length; i++) {
+                if(files[i].isDirectory()) {
+                    deleteDirectory(files[i]);
+                }
+                else {
+                    files[i].delete();
+                }
+            }
+        }
+
+        return( path.delete() );
     }
 
 }

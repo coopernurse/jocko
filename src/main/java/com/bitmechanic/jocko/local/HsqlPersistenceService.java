@@ -48,7 +48,17 @@ public class HsqlPersistenceService extends NonTypedPersistenceService {
     @Override
     protected void finalize() throws Throwable {
         super.finalize();
-        conn.close();
+        shutdown();
+    }
+
+    public void shutdown() throws SQLException {
+        if (conn != null) {
+            Statement stmt = conn.createStatement();
+            stmt.executeUpdate("SHUTDOWN");
+            stmt.close();
+            conn.close();
+            conn = null;
+        }
     }
 
     @Override

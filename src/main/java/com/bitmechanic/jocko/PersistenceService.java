@@ -23,6 +23,7 @@ public interface PersistenceService {
     public    int                                           queryCount(Query<? extends PersistableEntity> query);
     public    <T> List<String>                             queryForIds(Query<T> query);
     public    <T> List<T>                                        query(Query<T> query);
+    public    <T> T                                        querySingle(Query<T> query);
 
     public    <T> PaginatedResult<String>                  queryForIdsPaginated(Query<T> query);
     public    <T> PaginatedResult<T>                             queryPaginated(Query<T> query);

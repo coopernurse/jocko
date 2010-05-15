@@ -170,4 +170,12 @@ public abstract class AbstractBlobBackedPersistenceService implements Persistenc
         return set;
     }
 
+    public <T> T querySingle(Query<T> query) {
+        List<T> list = query(query);
+        if (list != null && list.size() > 0)
+            return list.get(0);
+        else
+            return null;
+    }
+
 }
