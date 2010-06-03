@@ -2,10 +2,15 @@ package com.bitmechanic.jocko.local;
 
 import com.bitmechanic.jocko.BlobService;
 import com.bitmechanic.util.IOUtil;
+import com.bitmechanic.util.StringUtil;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 
 /**
  * Created by James Cooper <james@bitmechanic.com>
@@ -15,6 +20,7 @@ import java.io.IOException;
 public class LocalBlobService implements BlobService {
 
     private File blobDir;
+    private String urlFormat;
 
     public LocalBlobService() {
         this(System.getProperty("java.io.tmpdir"));
@@ -38,9 +44,19 @@ public class LocalBlobService implements BlobService {
         }
     }
 
+    public String getUrlFormat() {
+        return urlFormat;
+    }
+
+    public void setUrlFormat(String urlFormat) {
+        this.urlFormat = urlFormat;
+    }
+
     @Override
     public boolean delete(String key) throws IOException {
         File file = getFile(key);
+        File mimeFile = getMimeTypeFile(key);
+        mimeFile.delete();
         return file.delete();
     }
 
@@ -86,15 +102,43 @@ public class LocalBlobService implements BlobService {
         }
         fos.flush();
         fos.close();
+
+        File mimeFile = getMimeTypeFile(key);
+        PrintWriter mimeWriter = new PrintWriter(new FileWriter(mimeFile));
+        mimeWriter.println(mimeType);
+        mimeWriter.close();
     }
 
     @Override
     public String getUrlForKey(String key) {
-        return "file://" + getFile(key).getAbsolutePath();
+        if (StringUtil.hasText(urlFormat)) {
+            try {
+                String url = urlFormat.replace("{blobId}", key);
+                url = url.replace("{mimeType}", getMimeType(key));
+                return url;
+            }
+            catch (IOException e) {
+                throw new RuntimeException("Unable to get url for blob: " + key, e);
+            }
+        }
+        else {
+            return "file://" + getFile(key).getAbsolutePath();
+        }
     }
 
     private File getFile(String key) {
         return new File(blobDir.getAbsolutePath() + File.separator + key);
     }
 
+    private File getMimeTypeFile(String key) {
+         return new File(blobDir.getAbsolutePath() + File.separator + key + "-mimetype");
+    }
+
+    private String getMimeType(String key) throws IOException {
+        File mimeFile = getMimeTypeFile(key);
+        BufferedReader reader = new BufferedReader(new FileReader(mimeFile));
+        String mimeType = reader.readLine();
+        reader.close();
+        return mimeType.trim();
+    }
 }

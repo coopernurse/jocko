@@ -106,28 +106,39 @@ public class IOUtil {
     }
 
     public static byte[] fetchUrlToByteArray(String url) throws IOException {
-        URL urlObj = new URL(url);
-
-        URLConnection conn = urlObj.openConnection();
-        HttpURLConnection httpConn = null;
-        if (conn instanceof HttpURLConnection) {
-            httpConn = (HttpURLConnection)conn;
-            httpConn.setRequestMethod("GET");
-            httpConn.setReadTimeout(30000);
-            httpConn.setInstanceFollowRedirects(false);
-            httpConn.connect();
-            if (httpConn.getResponseCode() != HttpURLConnection.HTTP_OK) {
-                throw new IOException("Got non-200 HTTP response: " + httpConn.getResponseCode() + " - " + httpConn.getResponseMessage() + " - " + url);
+        if (url.startsWith("file://")) {
+            File origFile = new File(url.substring(7));
+            if (!origFile.exists()) {
+                throw new IOException("File not found: " + url);
+            }
+            else {
+                return getBytesFromFile(origFile);
             }
         }
+        else {
+            URL urlObj = new URL(url);
 
-        InputStream responseData = conn.getInputStream();
-        byte data[] = getBytesFromInput(responseData);
-        responseData.close();
-        if (httpConn != null) {
-            httpConn.disconnect();
+            URLConnection conn = urlObj.openConnection();
+            HttpURLConnection httpConn = null;
+            if (conn instanceof HttpURLConnection) {
+                httpConn = (HttpURLConnection)conn;
+                httpConn.setRequestMethod("GET");
+                httpConn.setReadTimeout(30000);
+                httpConn.setInstanceFollowRedirects(false);
+                httpConn.connect();
+                if (httpConn.getResponseCode() != HttpURLConnection.HTTP_OK) {
+                    throw new IOException("Got non-200 HTTP response: " + httpConn.getResponseCode() + " - " + httpConn.getResponseMessage() + " - " + url);
+                }
+            }
+
+            InputStream responseData = conn.getInputStream();
+            byte data[] = getBytesFromInput(responseData);
+            responseData.close();
+            if (httpConn != null) {
+                httpConn.disconnect();
+            }
+            return data;
         }
-        return data;
     }
 
     public static Map<String, String> postToConnection(URL endPoint, Map uriParams) throws Exception {
